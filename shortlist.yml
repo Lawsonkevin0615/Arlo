@@ -1,0 +1,40 @@
+# Save this file in your repo at: .github/workflows/shortlist.yml
+name: Build shortlist
+
+on:
+  schedule:
+    # 12:23 UTC on weekdays = 8:23 AM EDT / 7:23 AM EST (before the market opens)
+    - cron: "23 12 * * 1-5"
+  workflow_dispatch:   # lets you run it by hand from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shortlist
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build shortlist
+        run: python build_shortlist.py
+
+      - name: Commit result
+        run: |
+          git config user.name "shortlist-bot"
+          git config user.email "shortlist-bot@users.noreply.github.com"
+          git add data/shortlist.json
+          git diff --cached --quiet || git commit -m "Update shortlist $(date -u +%F)"
+          git push
