@@ -1,10 +1,13 @@
 {
-  "generated_at_utc": "2026-10-08T22:46:32Z",
+  "generated_at_utc": "2026-10-09T02:10:29Z",
   "as_of_date": "2026-10-08",
   "status": "ok",
+  "universe_source": "wikipedia_sp500_fallback",
   "universe_size": 515,
   "symbols_scored": 512,
-  "rubric": "pre_score = Trend(30) + Momentum(25) + Backdrop(20) + Volume(5), max 80. Agent adds Catalyst(15) + Spread(5). Buy only if final score >= 85.",
+  "coverage_pct": 99.4,
+  "finviz_filters": null,
+  "rubric": "pre_score = Trend(30) + Momentum(25) + Backdrop(20) + Volume(5), maximum 80. The agent must independently verify live quotes, spread, news, and earnings before considering a trade.",
   "market": {
     "backdrop_pts": 20,
     "SPY": {
@@ -18,12 +21,14 @@
       "pct_above_sma50": 3.38
     }
   },
+  "candidate_count": 30,
   "candidates": [
     {
       "ticker": "APA",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 45.47,
       "sma50": 42.27,
@@ -31,13 +36,14 @@
       "roc21_pct": 1.4,
       "roc63_pct": 35.97,
       "pct_above_sma50": 7.56,
-      "avg_vol_50d": 5733094
+      "avg_vol_50d": 5733264
     },
     {
       "ticker": "MSFT",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 522.61,
       "sma50": 498.77,
@@ -45,13 +51,14 @@
       "roc21_pct": 6.3,
       "roc63_pct": 35.71,
       "pct_above_sma50": 4.78,
-      "avg_vol_50d": 26758983
+      "avg_vol_50d": 26771150
     },
     {
       "ticker": "SWKS",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 80.75,
       "sma50": 75.86,
@@ -66,6 +73,7 @@
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 139.75,
       "sma50": 131.61,
@@ -73,13 +81,14 @@
       "roc21_pct": 6.59,
       "roc63_pct": 29.75,
       "pct_above_sma50": 6.19,
-      "avg_vol_50d": 15289703
+      "avg_vol_50d": 15290052
     },
     {
       "ticker": "XOM",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 168.5,
       "sma50": 161.33,
@@ -87,13 +96,14 @@
       "roc21_pct": 2.6,
       "roc63_pct": 21.33,
       "pct_above_sma50": 4.44,
-      "avg_vol_50d": 13826060
+      "avg_vol_50d": 13826122
     },
     {
       "ticker": "DIS",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 107.02,
       "sma50": 104.91,
@@ -101,13 +111,14 @@
       "roc21_pct": 2.73,
       "roc63_pct": 11.92,
       "pct_above_sma50": 2.01,
-      "avg_vol_50d": 9203579
+      "avg_vol_50d": 9227848
     },
     {
       "ticker": "NVDA",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 230.48,
       "sma50": 221.39,
@@ -115,13 +126,14 @@
       "roc21_pct": 3.04,
       "roc63_pct": 9.25,
       "pct_above_sma50": 4.1,
-      "avg_vol_50d": 119616655
+      "avg_vol_50d": 119628478
     },
     {
       "ticker": "FAST",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 50.49,
       "sma50": 50.11,
@@ -129,13 +141,14 @@
       "roc21_pct": 3.48,
       "roc63_pct": 8.6,
       "pct_above_sma50": 0.76,
-      "avg_vol_50d": 6880895
+      "avg_vol_50d": 6881016
     },
     {
       "ticker": "AAPL",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 340.42,
       "sma50": 322.32,
@@ -143,13 +156,14 @@
       "roc21_pct": 7.95,
       "roc63_pct": 7.96,
       "pct_above_sma50": 5.61,
-      "avg_vol_50d": 44241211
+      "avg_vol_50d": 44257612
     },
     {
       "ticker": "V",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 375.1,
       "sma50": 369.35,
@@ -157,13 +171,14 @@
       "roc21_pct": 2.1,
       "roc63_pct": 7.49,
       "pct_above_sma50": 1.56,
-      "avg_vol_50d": 6294453
+      "avg_vol_50d": 6294470
     },
     {
       "ticker": "APH",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 85.32,
       "sma50": 82.16,
@@ -171,13 +186,14 @@
       "roc21_pct": 4.89,
       "roc63_pct": 7.28,
       "pct_above_sma50": 3.84,
-      "avg_vol_50d": 12092944
+      "avg_vol_50d": 12096150
     },
     {
       "ticker": "VTRS",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 17.44,
       "sma50": 16.94,
@@ -185,13 +201,14 @@
       "roc21_pct": 5.7,
       "roc63_pct": 7.19,
       "pct_above_sma50": 2.98,
-      "avg_vol_50d": 9330227
+      "avg_vol_50d": 9330228
     },
     {
       "ticker": "XLK",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 197.78,
       "sma50": 188.59,
@@ -199,13 +216,14 @@
       "roc21_pct": 5.27,
       "roc63_pct": 6.46,
       "pct_above_sma50": 4.87,
-      "avg_vol_50d": 7144988
+      "avg_vol_50d": 7146334
     },
     {
       "ticker": "QQQ",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 747.58,
       "sma50": 723.17,
@@ -213,13 +231,14 @@
       "roc21_pct": 4.37,
       "roc63_pct": 3.04,
       "pct_above_sma50": 3.38,
-      "avg_vol_50d": 34122006
+      "avg_vol_50d": 34144890
     },
     {
       "ticker": "SPY",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 773.93,
       "sma50": 766.84,
@@ -227,13 +246,14 @@
       "roc21_pct": 1.51,
       "roc63_pct": 2.51,
       "pct_above_sma50": 0.92,
-      "avg_vol_50d": 43006747
+      "avg_vol_50d": 43012376
     },
     {
       "ticker": "VOO",
       "pre_score": 80,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 5,
       "price": 711.28,
       "sma50": 705.09,
@@ -241,13 +261,14 @@
       "roc21_pct": 1.49,
       "roc63_pct": 2.51,
       "pct_above_sma50": 0.88,
-      "avg_vol_50d": 7604983
+      "avg_vol_50d": 7605562
     },
     {
       "ticker": "CRL",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 298.0,
       "sma50": 281.83,
@@ -255,13 +276,14 @@
       "roc21_pct": 7.06,
       "roc63_pct": 27.67,
       "pct_above_sma50": 5.74,
-      "avg_vol_50d": 978587
+      "avg_vol_50d": 978588
     },
     {
       "ticker": "TMO",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 651.98,
       "sma50": 624.78,
@@ -269,13 +291,14 @@
       "roc21_pct": 7.64,
       "roc63_pct": 23.7,
       "pct_above_sma50": 4.35,
-      "avg_vol_50d": 1994233
+      "avg_vol_50d": 1994348
     },
     {
       "ticker": "BDX",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 182.75,
       "sma50": 181.57,
@@ -283,13 +306,14 @@
       "roc21_pct": 1.64,
       "roc63_pct": 20.28,
       "pct_above_sma50": 0.65,
-      "avg_vol_50d": 1816468
+      "avg_vol_50d": 1816680
     },
     {
       "ticker": "HAS",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 92.5,
       "sma50": 91.91,
@@ -297,13 +321,14 @@
       "roc21_pct": 3.97,
       "roc63_pct": 17.15,
       "pct_above_sma50": 0.64,
-      "avg_vol_50d": 1631783
+      "avg_vol_50d": 1631784
     },
     {
       "ticker": "FDS",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 286.52,
       "sma50": 283.04,
@@ -311,13 +336,14 @@
       "roc21_pct": 2.63,
       "roc63_pct": 15.95,
       "pct_above_sma50": 1.23,
-      "avg_vol_50d": 843774
+      "avg_vol_50d": 843776
     },
     {
       "ticker": "MCK",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 930.25,
       "sma50": 882.26,
@@ -325,13 +351,14 @@
       "roc21_pct": 4.33,
       "roc63_pct": 15.42,
       "pct_above_sma50": 5.44,
-      "avg_vol_50d": 926744
+      "avg_vol_50d": 926804
     },
     {
       "ticker": "EMR",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 159.06,
       "sma50": 155.59,
@@ -339,13 +366,14 @@
       "roc21_pct": 5.8,
       "roc63_pct": 14.53,
       "pct_above_sma50": 2.23,
-      "avg_vol_50d": 2592125
+      "avg_vol_50d": 2592508
     },
     {
       "ticker": "NDSN",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 326.87,
       "sma50": 318.07,
@@ -353,13 +381,14 @@
       "roc21_pct": 4.12,
       "roc63_pct": 14.05,
       "pct_above_sma50": 2.77,
-      "avg_vol_50d": 380772
+      "avg_vol_50d": 380986
     },
     {
       "ticker": "WAT",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 429.13,
       "sma50": 414.83,
@@ -367,13 +396,14 @@
       "roc21_pct": 6.01,
       "roc63_pct": 14.0,
       "pct_above_sma50": 3.45,
-      "avg_vol_50d": 769389
+      "avg_vol_50d": 769390
     },
     {
       "ticker": "EXPD",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 193.71,
       "sma50": 186.52,
@@ -381,13 +411,14 @@
       "roc21_pct": 2.87,
       "roc63_pct": 12.61,
       "pct_above_sma50": 3.85,
-      "avg_vol_50d": 1027831
+      "avg_vol_50d": 1027832
     },
     {
       "ticker": "TER",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 398.72,
       "sma50": 382.14,
@@ -395,13 +426,14 @@
       "roc21_pct": 3.92,
       "roc63_pct": 10.88,
       "pct_above_sma50": 4.34,
-      "avg_vol_50d": 2643640
+      "avg_vol_50d": 2644136
     },
     {
       "ticker": "EOG",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 148.51,
       "sma50": 144.52,
@@ -409,13 +441,14 @@
       "roc21_pct": 1.02,
       "roc63_pct": 10.75,
       "pct_above_sma50": 2.76,
-      "avg_vol_50d": 3062223
+      "avg_vol_50d": 3062252
     },
     {
       "ticker": "PM",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 200.5,
       "sma50": 189.7,
@@ -423,13 +456,14 @@
       "roc21_pct": 7.96,
       "roc63_pct": 10.4,
       "pct_above_sma50": 5.69,
-      "avg_vol_50d": 4495581
+      "avg_vol_50d": 4495624
     },
     {
       "ticker": "VRSN",
       "pre_score": 75,
       "trend": 30,
       "momentum": 25,
+      "backdrop": 20,
       "volume_pts": 0,
       "price": 297.79,
       "sma50": 290.29,
