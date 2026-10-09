@@ -1,17 +1,16 @@
 """
 Build data/shortlist.json for the trading agent.
 
-GitHub Actions uses Finviz to make a candidate universe, then Yahoo Finance
+GitHub Actions uses Finviz to build a candidate universe, then Yahoo Finance
 daily bars to calculate trend, momentum, market-backdrop, and volume scores.
 Only completed daily bars are used.
 
-Finviz or Yahoo Finance can block, rate-limit, or change their output. If the
-Finviz screen fails, this script falls back to S&P 500 constituents from
-Wikipedia. It refuses to replace the last good JSON if required market data
-is missing or data coverage is too low.
+If Finviz fails or returns too few stocks, the script falls back to S&P 500
+constituents from Wikipedia. It does not replace the existing JSON if required
+market data is missing or data coverage is too low.
 
-This script does not place trades and does not call Robinhood MCP. The agent
-should independently verify live data and trade details before any order.
+This script does not place trades or call Robinhood MCP. The agent should
+independently verify live data and trade details before any order.
 """
 
 import json
@@ -38,21 +37,15 @@ BATCH_SIZE = 100
 MIN_BARS = 205
 TOP_N = 30
 MIN_PRE_SCORE = 65
-
-# Coverage is measured against the selected universe. Symbols without enough
-# history for the required indicators will not count as scored.
 MIN_COVERAGE = 0.80
-
-# If the Finviz screen returns fewer than this number, use the S&P 500 fallback.
 MIN_FINVIZ_SYMBOLS = 50
 
 OUT_PATH = "data/shortlist.json"
 ET = ZoneInfo("America/New_York")
 
-# Finviz filter values may change. If Finviz or finvizfinance rejects them,
-# the script logs the issue and falls back to the Wikipedia S&P 500 list.
+# These names and values must match finvizfinance's accepted filter options.
 FINVIZ_FILTERS = {
-    "Market Cap": "+Large",
+    "Market Cap.": "+Large (over $10bln)",
     "Average Volume": "Over 1M",
     "Price": "Over $5",
     "P/E": "Under 50",
@@ -69,12 +62,7 @@ def normalize_ticker(value):
 
 
 def get_finviz_universe():
-    """
-    Return a Finviz-screened ticker list, or None if the screen fails.
-
-    finvizfinance documents the Overview.set_filter(filters_dict=...) and
-    Overview.screener_view(...) interfaces used here.
-    """
+    """Return Finviz-screened tickers, or None if the screen fails."""
     try:
         from finvizfinance.screener.overview import Overview
 
@@ -98,7 +86,7 @@ def get_finviz_universe():
 
         if len(tickers) < MIN_FINVIZ_SYMBOLS:
             print(
-                f"[Finviz] Only {len(tickers)} symbols returned; "
+                f"[Finviz] Only {len(tickers)} stocks returned; "
                 "using Wikipedia fallback."
             )
             return None
@@ -125,7 +113,9 @@ def get_wikipedia_universe():
 
     tables = pd.read_html(StringIO(response.text))
     if not tables or "Symbol" not in tables[0].columns:
-        raise RuntimeError("Could not find the S&P 500 ticker table on Wikipedia.")
+        raise RuntimeError(
+            "Could not find the S&P 500 ticker table on Wikipedia."
+        )
 
     tickers = {
         normalize_ticker(ticker)
@@ -139,6 +129,7 @@ def get_universe():
     universe = get_finviz_universe()
     if universe:
         return universe, "finviz"
+
     return get_wikipedia_universe(), "wikipedia_sp500_fallback"
 
 
@@ -159,8 +150,11 @@ def download_batch(symbols, tries=3):
             )
             if frame is not None and not frame.empty:
                 return frame
+
         except Exception as exc:
-            print(f"[Yahoo Finance] Batch attempt {attempt + 1} failed: {exc}")
+            print(
+                f"[Yahoo Finance] Batch attempt {attempt + 1} failed: {exc}"
+            )
 
         if attempt < tries - 1:
             time.sleep(5 * (attempt + 1))
@@ -182,6 +176,7 @@ def series_for(frame, symbol):
             return None
 
         return data[["Close", "Volume"]].dropna(subset=["Close"])
+
     except Exception:
         return None
 
@@ -201,7 +196,7 @@ def drop_partial_bar(data):
 
 
 def compute_metrics(data):
-    """Calculate the technical measures used by the shortlist score."""
+    """Calculate technical measures used by the shortlist score."""
     if data is None or data.empty:
         return None
 
@@ -277,7 +272,7 @@ def backdrop_pts(spy, qqq):
 # ── Build output ────────────────────────────────────────────────
 
 def write_json_atomically(data):
-    """Write a temporary file, then replace the previous output atomically."""
+    """Write a temporary JSON file, then replace the previous output."""
     output_dir = os.path.dirname(OUT_PATH)
     os.makedirs(output_dir, exist_ok=True)
 
@@ -291,6 +286,7 @@ def write_json_atomically(data):
 
 def main():
     universe, universe_source = get_universe()
+
     if not universe:
         print("ERROR: The selected ticker universe is empty.")
         sys.exit(1)
@@ -323,7 +319,10 @@ def main():
         time.sleep(2)
 
     if "SPY" not in metrics_by_symbol or "QQQ" not in metrics_by_symbol:
-        print("ERROR: SPY or QQQ data is missing; leaving the previous JSON untouched.")
+        print(
+            "ERROR: SPY or QQQ data is missing; "
+            "leaving the previous JSON untouched."
+        )
         sys.exit(1)
 
     coverage = len(metrics_by_symbol) / len(universe)
@@ -347,7 +346,7 @@ def main():
     candidates = []
 
     for symbol, metrics in metrics_by_symbol.items():
-        # Do not mix symbols with dates older than the SPY market data date.
+        # Avoid mixing data dates older than the SPY market-data date.
         if metrics["as_of"] != market_date:
             continue
 
@@ -391,7 +390,9 @@ def main():
         "universe_size": len(universe),
         "symbols_scored": len(metrics_by_symbol),
         "coverage_pct": round(coverage * 100, 1),
-        "finviz_filters": FINVIZ_FILTERS if universe_source == "finviz" else None,
+        "finviz_filters": (
+            FINVIZ_FILTERS if universe_source == "finviz" else None
+        ),
         "rubric": (
             "pre_score = Trend(30) + Momentum(25) + Backdrop(20) + "
             "Volume(5), maximum 80. The agent must independently verify "
@@ -415,6 +416,7 @@ def main():
     }
 
     write_json_atomically(output)
+
     print(
         f"Wrote {OUT_PATH}: {len(output['candidates'])} candidates "
         f"(market data as of {market_date})."
