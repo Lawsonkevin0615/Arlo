@@ -1,10 +1,10 @@
 {
-  "generated_at_utc": "2026-10-09T02:23:31Z",
+  "generated_at_utc": "2026-10-09T13:11:49Z",
   "as_of_date": "2026-10-08",
   "status": "ok",
   "universe_source": "finviz",
-  "universe_size": 240,
-  "symbols_scored": 237,
+  "universe_size": 242,
+  "symbols_scored": 239,
   "coverage_pct": 98.8,
   "finviz_filters": {
     "Market Cap.": "+Large (over $10bln)",
@@ -59,6 +59,21 @@
       "roc63_pct": 33.74,
       "pct_above_sma50": 6.45,
       "avg_vol_50d": 7040314
+    },
+    {
+      "ticker": "SHEL",
+      "pre_score": 80,
+      "trend": 30,
+      "momentum": 25,
+      "backdrop": 20,
+      "volume_pts": 5,
+      "price": 100.2,
+      "sma50": 93.47,
+      "sma200": 85.75,
+      "roc21_pct": 4.81,
+      "roc63_pct": 21.85,
+      "pct_above_sma50": 7.2,
+      "avg_vol_50d": 6384966
     },
     {
       "ticker": "XOM",
@@ -464,21 +479,6 @@
       "roc63_pct": 21.11,
       "pct_above_sma50": 4.03,
       "avg_vol_50d": 1816258
-    },
-    {
-      "ticker": "SPOT",
-      "pre_score": 65,
-      "trend": 30,
-      "momentum": 15,
-      "backdrop": 20,
-      "volume_pts": 0,
-      "price": 526.42,
-      "sma50": 516.45,
-      "sma200": 498.94,
-      "roc21_pct": 0.65,
-      "roc63_pct": 9.72,
-      "pct_above_sma50": 1.93,
-      "avg_vol_50d": 1704746
     }
   ]
 }
