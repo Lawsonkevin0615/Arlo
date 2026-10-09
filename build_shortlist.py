@@ -1,18 +1,19 @@
 """
-build_shortlist.py - builds data/shortlist.json for the trading agent.
+Build data/shortlist.json for the trading agent.
 
-Runs for free in GitHub Actions (see shortlist.yml). It uses free Yahoo Finance
-data (yfinance) for daily bars of the S&P 500 plus a few core ETFs, computes the
-trend / momentum / backdrop / volume part of the agent's score from COMPLETED
-daily bars only, and saves the best candidates.
+GitHub Actions uses Finviz to make a candidate universe, then Yahoo Finance
+daily bars to calculate trend, momentum, market-backdrop, and volume scores.
+Only completed daily bars are used.
 
-The agent still checks live quotes, earnings dates and headlines itself, and
-re-verifies its final pick with Robinhood's own data before buying.
+Finviz or Yahoo Finance can block, rate-limit, or change their output. If the
+Finviz screen fails, this script falls back to S&P 500 constituents from
+Wikipedia. It refuses to replace the last good JSON if required market data
+is missing or data coverage is too low.
 
-If the data looks bad (SPY/QQQ missing or under 90% of symbols loaded) the
-script exits with an error and does NOT overwrite the last good file, so the
-agent sees an old timestamp and refuses to use it.
+This script does not place trades and does not call Robinhood MCP. The agent
+should independently verify live data and trade details before any order.
 """
+
 import json
 import os
 import sys
@@ -25,187 +26,399 @@ import pandas as pd
 import requests
 import yfinance as yf
 
-CORE_ETFS = ["SPY", "QQQ", "VOO", "VTI", "XLK", "XLF", "XLE", "XLV", "XLY", "XLP", "XLI", "XLU"]
+
+# ── Configuration ──────────────────────────────────────────────
+
+CORE_ETFS = [
+    "SPY", "QQQ", "VOO", "VTI",
+    "XLK", "XLF", "XLE", "XLV", "XLY", "XLP", "XLI", "XLU",
+]
+
 BATCH_SIZE = 100
-MIN_BARS = 205          # 200 for SMA200, 64 for ROC63, plus a little slack
-TOP_N = 30              # candidates written to the file
-MIN_PRE_SCORE = 65      # pre_score + up to 20 more (catalyst 15, spread 5) must reach 85
-MIN_COVERAGE = 0.90     # fail the run if fewer than 90% of symbols loaded
+MIN_BARS = 205
+TOP_N = 30
+MIN_PRE_SCORE = 65
+
+# Coverage is measured against the selected universe. Symbols without enough
+# history for the required indicators will not count as scored.
+MIN_COVERAGE = 0.80
+
+# If the Finviz screen returns fewer than this number, use the S&P 500 fallback.
+MIN_FINVIZ_SYMBOLS = 50
+
 OUT_PATH = "data/shortlist.json"
 ET = ZoneInfo("America/New_York")
 
+# Finviz filter values may change. If Finviz or finvizfinance rejects them,
+# the script logs the issue and falls back to the Wikipedia S&P 500 list.
+FINVIZ_FILTERS = {
+    "Market Cap": "+Large",
+    "Average Volume": "Over 1M",
+    "Price": "Over $5",
+    "P/E": "Under 50",
+    "Current Ratio": "Over 1",
+    "Debt/Equity": "Under 1",
+}
+
+
+# ── Universe ────────────────────────────────────────────────────
+
+def normalize_ticker(value):
+    """Normalize a ticker for Yahoo Finance, e.g. BRK.B to BRK-B."""
+    return str(value).strip().upper().replace(".", "-")
+
+
+def get_finviz_universe():
+    """
+    Return a Finviz-screened ticker list, or None if the screen fails.
+
+    finvizfinance documents the Overview.set_filter(filters_dict=...) and
+    Overview.screener_view(...) interfaces used here.
+    """
+    try:
+        from finvizfinance.screener.overview import Overview
+
+        screener = Overview()
+        screener.set_filter(filters_dict=FINVIZ_FILTERS)
+        frame = screener.screener_view(
+            limit=2000,
+            verbose=0,
+            sleep_sec=1,
+        )
+
+        if frame is None or frame.empty or "Ticker" not in frame.columns:
+            print("[Finviz] No usable ticker results; using Wikipedia fallback.")
+            return None
+
+        tickers = {
+            normalize_ticker(ticker)
+            for ticker in frame["Ticker"].dropna().tolist()
+            if str(ticker).strip()
+        }
+
+        if len(tickers) < MIN_FINVIZ_SYMBOLS:
+            print(
+                f"[Finviz] Only {len(tickers)} symbols returned; "
+                "using Wikipedia fallback."
+            )
+            return None
+
+        universe = sorted(tickers | set(CORE_ETFS))
+        print(f"[Finviz] Screen returned {len(tickers)} stocks.")
+        return universe
+
+    except Exception as exc:
+        print(f"[Finviz] Screen failed: {exc}")
+        print("[Finviz] Using Wikipedia S&P 500 fallback.")
+        return None
+
+
+def get_wikipedia_universe():
+    """Return S&P 500 constituents from Wikipedia plus the core ETFs."""
+    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
+    response = requests.get(
+        url,
+        headers={"User-Agent": "Mozilla/5.0 (shortlist-bot)"},
+        timeout=30,
+    )
+    response.raise_for_status()
+
+    tables = pd.read_html(StringIO(response.text))
+    if not tables or "Symbol" not in tables[0].columns:
+        raise RuntimeError("Could not find the S&P 500 ticker table on Wikipedia.")
+
+    tickers = {
+        normalize_ticker(ticker)
+        for ticker in tables[0]["Symbol"].dropna().tolist()
+    }
+    return sorted(tickers | set(CORE_ETFS))
+
 
 def get_universe():
-    """S&P 500 constituents from Wikipedia plus the core ETFs."""
-    url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-    html = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (shortlist-bot)"}, timeout=30).text
-    symbols = pd.read_html(StringIO(html))[0]["Symbol"].tolist()
-    symbols = [str(s).strip().replace(".", "-") for s in symbols]
-    return sorted(set(symbols + CORE_ETFS))
+    """Use Finviz first, with an S&P 500 fallback."""
+    universe = get_finviz_universe()
+    if universe:
+        return universe, "finviz"
+    return get_wikipedia_universe(), "wikipedia_sp500_fallback"
 
+
+# ── Download and indicator calculations ─────────────────────────
 
 def download_batch(symbols, tries=3):
-    """Download about a year of daily bars (split-adjusted, like Robinhood's default)."""
+    """Download approximately one year of daily bars from Yahoo Finance."""
     for attempt in range(tries):
         try:
-            df = yf.download(
-                symbols, period="1y", interval="1d", auto_adjust=False,
-                group_by="ticker", threads=True, progress=False,
+            frame = yf.download(
+                symbols,
+                period="1y",
+                interval="1d",
+                auto_adjust=False,
+                group_by="ticker",
+                threads=True,
+                progress=False,
             )
-            if df is not None and not df.empty:
-                return df
-        except Exception as exc:  # network / rate-limit problems
-            print(f"batch error (attempt {attempt + 1}): {exc}")
-        time.sleep(5 * (attempt + 1))
+            if frame is not None and not frame.empty:
+                return frame
+        except Exception as exc:
+            print(f"[Yahoo Finance] Batch attempt {attempt + 1} failed: {exc}")
+
+        if attempt < tries - 1:
+            time.sleep(5 * (attempt + 1))
+
     return None
 
 
-def series_for(df, symbol):
+def series_for(frame, symbol):
+    """Extract Close and Volume for one ticker from a yfinance batch."""
     try:
-        sub = df[symbol] if isinstance(df.columns, pd.MultiIndex) else df
-        return sub[["Close", "Volume"]].dropna(subset=["Close"])
+        if isinstance(frame.columns, pd.MultiIndex):
+            if symbol not in frame.columns.get_level_values(0):
+                return None
+            data = frame[symbol]
+        else:
+            data = frame
+
+        if "Close" not in data.columns or "Volume" not in data.columns:
+            return None
+
+        return data[["Close", "Volume"]].dropna(subset=["Close"])
     except Exception:
         return None
 
 
-def drop_partial_bar(sub):
-    """Remove today's bar if the regular session is not finished yet."""
-    if sub.empty:
-        return sub
+def drop_partial_bar(data):
+    """Drop today's daily bar if the regular US session is not finished."""
+    if data is None or data.empty:
+        return data
+
     now = datetime.now(ET)
-    last = pd.Timestamp(sub.index[-1]).date()
-    if last == now.date() and (now.hour, now.minute) < (16, 15):
-        return sub.iloc[:-1]
-    return sub
+    last_date = pd.Timestamp(data.index[-1]).date()
+
+    if last_date == now.date() and (now.hour, now.minute) < (16, 15):
+        return data.iloc[:-1]
+
+    return data
 
 
-def compute_metrics(sub):
-    close = sub["Close"].astype(float)
+def compute_metrics(data):
+    """Calculate the technical measures used by the shortlist score."""
+    if data is None or data.empty:
+        return None
+
+    close = data["Close"].astype(float).dropna()
+    volume = data["Volume"].astype(float)
+
     if len(close) < MIN_BARS:
         return None
+
     price = float(close.iloc[-1])
     sma50 = float(close.iloc[-50:].mean())
     sma200 = float(close.iloc[-200:].mean())
+
     if min(price, sma50, sma200) <= 0:
         return None
+
+    close_22_days_ago = float(close.iloc[-22])
+    close_64_days_ago = float(close.iloc[-64])
+
+    if close_22_days_ago <= 0 or close_64_days_ago <= 0:
+        return None
+
     return {
         "price": price,
         "sma50": sma50,
         "sma200": sma200,
-        "roc21": (price / float(close.iloc[-22]) - 1) * 100,
-        "roc63": (price / float(close.iloc[-64]) - 1) * 100,
+        "roc21": (price / close_22_days_ago - 1) * 100,
+        "roc63": (price / close_64_days_ago - 1) * 100,
         "pct_above_sma50": (price / sma50 - 1) * 100,
-        "avg_vol_50d": float(sub["Volume"].iloc[-50:].mean()),
-        "as_of": str(pd.Timestamp(sub.index[-1]).date()),
+        "avg_vol_50d": float(volume.iloc[-50:].mean()),
+        "as_of": str(pd.Timestamp(close.index[-1]).date()),
     }
 
 
-def trend_pts(m):
-    if m["price"] > m["sma50"] and m["sma50"] > m["sma200"]:
+# ── Scoring ─────────────────────────────────────────────────────
+
+def trend_pts(metrics):
+    if metrics["price"] > metrics["sma50"] > metrics["sma200"]:
         return 30
-    if m["price"] > m["sma50"]:
+    if metrics["price"] > metrics["sma50"]:
         return 12
     return 0
 
 
-def momentum_pts(m):
-    if m["pct_above_sma50"] > 8:        # anti-chase rule
+def momentum_pts(metrics):
+    # Anti-chase rule: do not award momentum points if price is too extended.
+    if metrics["pct_above_sma50"] > 8:
         return 0
-    if m["roc21"] > 0 and m["roc63"] > 0:
-        return 25 if 1 <= m["roc21"] <= 8 else 15
+
+    if metrics["roc21"] > 0 and metrics["roc63"] > 0:
+        return 25 if 1 <= metrics["roc21"] <= 8 else 15
+
     return 0
 
 
 def backdrop_pts(spy, qqq):
     spy_up = spy["price"] > spy["sma50"]
     qqq_up = qqq["price"] > qqq["sma50"]
-    pts = 7 * int(spy_up) + 7 * int(qqq_up)
-    if spy_up and qqq_up and spy["pct_above_sma50"] <= 5 and qqq["pct_above_sma50"] <= 5:
-        pts += 6
-    return pts
+
+    points = 7 * int(spy_up) + 7 * int(qqq_up)
+
+    if (
+        spy_up
+        and qqq_up
+        and spy["pct_above_sma50"] <= 5
+        and qqq["pct_above_sma50"] <= 5
+    ):
+        points += 6
+
+    return points
+
+
+# ── Build output ────────────────────────────────────────────────
+
+def write_json_atomically(data):
+    """Write a temporary file, then replace the previous output atomically."""
+    output_dir = os.path.dirname(OUT_PATH)
+    os.makedirs(output_dir, exist_ok=True)
+
+    temp_path = f"{OUT_PATH}.tmp"
+    with open(temp_path, "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=2)
+        file.write("\n")
+
+    os.replace(temp_path, OUT_PATH)
 
 
 def main():
-    universe = get_universe()
-    print(f"Universe: {len(universe)} symbols")
+    universe, universe_source = get_universe()
+    if not universe:
+        print("ERROR: The selected ticker universe is empty.")
+        sys.exit(1)
 
-    metrics = {}
-    for i in range(0, len(universe), BATCH_SIZE):
-        batch = universe[i:i + BATCH_SIZE]
-        df = download_batch(batch)
-        if df is None:
-            print(f"Batch starting at {i} failed completely")
+    print(f"Universe source: {universe_source}")
+    print(f"Universe size: {len(universe)} symbols")
+
+    metrics_by_symbol = {}
+
+    for start in range(0, len(universe), BATCH_SIZE):
+        batch = universe[start:start + BATCH_SIZE]
+        frame = download_batch(batch)
+
+        if frame is None:
+            print(f"[Yahoo Finance] Batch starting at {start} failed.")
             continue
-        for sym in batch:
-            sub = series_for(df, sym)
-            if sub is None or sub.empty:
-                continue
-            m = compute_metrics(drop_partial_bar(sub))
-            if m:
-                metrics[sym] = m
+
+        for symbol in batch:
+            data = series_for(frame, symbol)
+            data = drop_partial_bar(data)
+            metrics = compute_metrics(data)
+
+            if metrics:
+                metrics_by_symbol[symbol] = metrics
+
+        print(
+            f"Scored data for {len(metrics_by_symbol)} symbols "
+            f"after batch {start // BATCH_SIZE + 1}."
+        )
         time.sleep(2)
 
-    if "SPY" not in metrics or "QQQ" not in metrics:
-        print("ERROR: SPY or QQQ data missing; not writing a new file.")
+    if "SPY" not in metrics_by_symbol or "QQQ" not in metrics_by_symbol:
+        print("ERROR: SPY or QQQ data is missing; leaving the previous JSON untouched.")
         sys.exit(1)
 
-    coverage = len(metrics) / len(universe)
-    print(f"Coverage: {len(metrics)}/{len(universe)} ({coverage:.0%})")
+    coverage = len(metrics_by_symbol) / len(universe)
+    print(
+        f"Coverage: {len(metrics_by_symbol)}/{len(universe)} "
+        f"({coverage:.0%})"
+    )
+
     if coverage < MIN_COVERAGE:
-        print("ERROR: coverage too low; not writing a new file.")
+        print(
+            "ERROR: Coverage is below the minimum; "
+            "leaving the previous JSON untouched."
+        )
         sys.exit(1)
 
-    market_date = metrics["SPY"]["as_of"]
-    spy, qqq = metrics["SPY"], metrics["QQQ"]
-    backdrop = backdrop_pts(spy, qqq)
+    market_date = metrics_by_symbol["SPY"]["as_of"]
+    spy = metrics_by_symbol["SPY"]
+    qqq = metrics_by_symbol["QQQ"]
+    market_backdrop = backdrop_pts(spy, qqq)
 
-    rows = []
-    for sym, m in metrics.items():
-        if m["as_of"] != market_date:      # stale or halted symbol
+    candidates = []
+
+    for symbol, metrics in metrics_by_symbol.items():
+        # Do not mix symbols with dates older than the SPY market data date.
+        if metrics["as_of"] != market_date:
             continue
-        t, mo = trend_pts(m), momentum_pts(m)
-        vol = 5 if m["avg_vol_50d"] > 5_000_000 else 0
-        pre = t + mo + backdrop + vol
-        rows.append({
-            "ticker": sym,
-            "pre_score": pre,
-            "trend": t,
-            "momentum": mo,
-            "volume_pts": vol,
-            "price": round(m["price"], 2),
-            "sma50": round(m["sma50"], 2),
-            "sma200": round(m["sma200"], 2),
-            "roc21_pct": round(m["roc21"], 2),
-            "roc63_pct": round(m["roc63"], 2),
-            "pct_above_sma50": round(m["pct_above_sma50"], 2),
-            "avg_vol_50d": int(m["avg_vol_50d"]),
+
+        trend = trend_pts(metrics)
+        momentum = momentum_pts(metrics)
+        volume_points = 5 if metrics["avg_vol_50d"] > 5_000_000 else 0
+        pre_score = trend + momentum + market_backdrop + volume_points
+
+        candidates.append({
+            "ticker": symbol,
+            "pre_score": pre_score,
+            "trend": trend,
+            "momentum": momentum,
+            "backdrop": market_backdrop,
+            "volume_pts": volume_points,
+            "price": round(metrics["price"], 2),
+            "sma50": round(metrics["sma50"], 2),
+            "sma200": round(metrics["sma200"], 2),
+            "roc21_pct": round(metrics["roc21"], 2),
+            "roc63_pct": round(metrics["roc63"], 2),
+            "pct_above_sma50": round(metrics["pct_above_sma50"], 2),
+            "avg_vol_50d": int(metrics["avg_vol_50d"]),
         })
 
-    rows = [r for r in rows if r["pre_score"] >= MIN_PRE_SCORE]
-    rows.sort(key=lambda r: (r["pre_score"], r["roc63_pct"]), reverse=True)
+    candidates = [
+        row for row in candidates
+        if row["pre_score"] >= MIN_PRE_SCORE
+    ]
+    candidates.sort(
+        key=lambda row: (row["pre_score"], row["roc63_pct"]),
+        reverse=True,
+    )
 
-    out = {
-        "generated_at_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    output = {
+        "generated_at_utc": datetime.now(timezone.utc).strftime(
+            "%Y-%m-%dT%H:%M:%SZ"
+        ),
         "as_of_date": market_date,
         "status": "ok",
+        "universe_source": universe_source,
         "universe_size": len(universe),
-        "symbols_scored": len(metrics),
-        "rubric": ("pre_score = Trend(30) + Momentum(25) + Backdrop(20) + Volume(5), max 80. "
-                   "Agent adds Catalyst(15) + Spread(5). Buy only if final score >= 85."),
+        "symbols_scored": len(metrics_by_symbol),
+        "coverage_pct": round(coverage * 100, 1),
+        "finviz_filters": FINVIZ_FILTERS if universe_source == "finviz" else None,
+        "rubric": (
+            "pre_score = Trend(30) + Momentum(25) + Backdrop(20) + "
+            "Volume(5), maximum 80. The agent must independently verify "
+            "live quotes, spread, news, and earnings before considering a trade."
+        ),
         "market": {
-            "backdrop_pts": backdrop,
-            "SPY": {"price": round(spy["price"], 2), "sma50": round(spy["sma50"], 2),
-                    "pct_above_sma50": round(spy["pct_above_sma50"], 2)},
-            "QQQ": {"price": round(qqq["price"], 2), "sma50": round(qqq["sma50"], 2),
-                    "pct_above_sma50": round(qqq["pct_above_sma50"], 2)},
+            "backdrop_pts": market_backdrop,
+            "SPY": {
+                "price": round(spy["price"], 2),
+                "sma50": round(spy["sma50"], 2),
+                "pct_above_sma50": round(spy["pct_above_sma50"], 2),
+            },
+            "QQQ": {
+                "price": round(qqq["price"], 2),
+                "sma50": round(qqq["sma50"], 2),
+                "pct_above_sma50": round(qqq["pct_above_sma50"], 2),
+            },
         },
-        "candidates": rows[:TOP_N],
+        "candidate_count": min(len(candidates), TOP_N),
+        "candidates": candidates[:TOP_N],
     }
 
-    os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
-    with open(OUT_PATH, "w") as f:
-        json.dump(out, f, indent=2)
-    print(f"Wrote {OUT_PATH}: {len(out['candidates'])} candidates (as of {market_date})")
+    write_json_atomically(output)
+    print(
+        f"Wrote {OUT_PATH}: {len(output['candidates'])} candidates "
+        f"(market data as of {market_date})."
+    )
 
 
 if __name__ == "__main__":
