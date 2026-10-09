@@ -1,10 +1,10 @@
 {
-  "generated_at_utc": "2026-10-09T13:11:49Z",
+  "generated_at_utc": "2026-10-09T18:26:41Z",
   "as_of_date": "2026-10-08",
   "status": "ok",
   "universe_source": "finviz",
-  "universe_size": 242,
-  "symbols_scored": 239,
+  "universe_size": 241,
+  "symbols_scored": 238,
   "coverage_pct": 98.8,
   "finviz_filters": {
     "Market Cap.": "+Large (over $10bln)",
