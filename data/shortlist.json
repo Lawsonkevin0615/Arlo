@@ -1,11 +1,11 @@
 {
-  "generated_at_utc": "2026-11-02T21:49:12Z",
+  "generated_at_utc": "2026-11-03T19:39:27Z",
   "as_of_date": "2026-11-02",
   "status": "ok",
   "universe_source": "wikipedia_sp500_fallback",
   "universe_size": 515,
-  "symbols_scored": 512,
-  "coverage_pct": 99.4,
+  "symbols_scored": 511,
+  "coverage_pct": 99.2,
   "finviz_filters": null,
   "rubric": "pre_score = Trend(30) + Momentum(25) + Backdrop(20) + Volume(5), maximum 80. The agent must independently verify live quotes, spread, news, and earnings before considering a trade.",
   "market": {
