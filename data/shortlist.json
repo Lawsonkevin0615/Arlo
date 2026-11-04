@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-11-03T19:39:27Z",
-  "as_of_date": "2026-11-02",
+  "generated_at_utc": "2026-11-04T19:55:36Z",
+  "as_of_date": "2026-11-03",
   "status": "ok",
   "universe_source": "wikipedia_sp500_fallback",
   "universe_size": 515,
@@ -11,14 +11,14 @@
   "market": {
     "backdrop_pts": 0,
     "SPY": {
-      "price": 752.1,
-      "sma50": 767.22,
-      "pct_above_sma50": -1.97
+      "price": 754.35,
+      "sma50": 767.04,
+      "pct_above_sma50": -1.65
     },
     "QQQ": {
-      "price": 681.09,
-      "sma50": 724.35,
-      "pct_above_sma50": -5.97
+      "price": 685.28,
+      "sma50": 723.93,
+      "pct_above_sma50": -5.34
     }
   },
   "candidate_count": 0,
