@@ -1,12 +1,19 @@
 {
-  "generated_at_utc": "2026-11-09T22:32:52Z",
+  "generated_at_utc": "2026-11-10T19:52:55Z",
   "as_of_date": "2026-11-09",
   "status": "ok",
-  "universe_source": "wikipedia_sp500_fallback",
-  "universe_size": 515,
-  "symbols_scored": 512,
-  "coverage_pct": 99.4,
-  "finviz_filters": null,
+  "universe_source": "finviz",
+  "universe_size": 250,
+  "symbols_scored": 246,
+  "coverage_pct": 98.4,
+  "finviz_filters": {
+    "Market Cap.": "+Large (over $10bln)",
+    "Average Volume": "Over 1M",
+    "Price": "Over $5",
+    "P/E": "Under 50",
+    "Current Ratio": "Over 1",
+    "Debt/Equity": "Under 1"
+  },
   "rubric": "pre_score = Trend(30) + Momentum(25) + Backdrop(20) + Volume(5), maximum 80. The agent must independently verify live quotes, spread, news, and earnings before considering a trade.",
   "market": {
     "backdrop_pts": 0,
