@@ -1,6 +1,6 @@
 {
-  "generated_at_utc": "2026-11-13T19:53:42Z",
-  "as_of_date": "2026-11-12",
+  "generated_at_utc": "2026-11-16T22:21:38Z",
+  "as_of_date": "2026-11-16",
   "status": "ok",
   "universe_source": "finviz",
   "universe_size": 248,
@@ -18,14 +18,14 @@
   "market": {
     "backdrop_pts": 0,
     "SPY": {
-      "price": 757.12,
-      "sma50": 764.8,
-      "pct_above_sma50": -1.0
+      "price": 739.95,
+      "sma50": 763.82,
+      "pct_above_sma50": -3.13
     },
     "QQQ": {
-      "price": 688.17,
-      "sma50": 718.62,
-      "pct_above_sma50": -4.24
+      "price": 661.75,
+      "sma50": 716.72,
+      "pct_above_sma50": -7.67
     }
   },
   "candidate_count": 0,
