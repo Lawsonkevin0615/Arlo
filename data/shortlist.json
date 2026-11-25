@@ -1,10 +1,10 @@
 {
-  "generated_at_utc": "2026-11-24T22:37:59Z",
-  "as_of_date": "2026-11-24",
+  "generated_at_utc": "2026-11-25T21:51:27Z",
+  "as_of_date": "2026-11-25",
   "status": "ok",
   "universe_source": "finviz",
-  "universe_size": 249,
-  "symbols_scored": 246,
+  "universe_size": 250,
+  "symbols_scored": 247,
   "coverage_pct": 98.8,
   "finviz_filters": {
     "Market Cap.": "+Large (over $10bln)",
@@ -18,14 +18,14 @@
   "market": {
     "backdrop_pts": 0,
     "SPY": {
-      "price": 718.78,
-      "sma50": 758.64,
-      "pct_above_sma50": -5.25
+      "price": 716.7,
+      "sma50": 757.89,
+      "pct_above_sma50": -5.43
     },
     "QQQ": {
-      "price": 638.1,
-      "sma50": 708.47,
-      "pct_above_sma50": -9.93
+      "price": 633.93,
+      "sma50": 707.05,
+      "pct_above_sma50": -10.34
     }
   },
   "candidate_count": 0,
