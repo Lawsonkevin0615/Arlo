@@ -1,11 +1,11 @@
 {
-  "generated_at_utc": "2026-11-25T21:51:27Z",
+  "generated_at_utc": "2026-11-26T21:45:16Z",
   "as_of_date": "2026-11-25",
   "status": "ok",
   "universe_source": "finviz",
   "universe_size": 250,
-  "symbols_scored": 247,
-  "coverage_pct": 98.8,
+  "symbols_scored": 248,
+  "coverage_pct": 99.2,
   "finviz_filters": {
     "Market Cap.": "+Large (over $10bln)",
     "Average Volume": "Over 1M",
